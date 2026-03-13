@@ -17,6 +17,33 @@
       ]
     },
     {
+      "source": "/(.*)\\.jpeg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=100, s-maxage=300, stale-while-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=100, s-maxage=300, stale-while-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.gif",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=100, s-maxage=300, stale-while-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/(.*)\\.mp4",
       "headers": [
         {

@@ -15,6 +15,13 @@
         font-family: Arial, sans-serif;
         background-color: #f5f5f5;
         padding: 20px;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      main {
+        flex: 1;
       }
 
       h1 {
@@ -31,7 +38,7 @@
         margin: 0 auto;
       }
 
-      .gallery-card {
+      .card {
         background: white;
         border-radius: 8px;
         overflow: hidden;
@@ -41,38 +48,55 @@
           box-shadow 0.3s ease;
       }
 
-      .gallery-card:hover {
+      .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
 
-      .photo {
+      .image-section {
         width: 100%;
         height: 200px;
-        background-color: #ddd;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         overflow: hidden;
+        background-color: #ddd;
+        cursor: pointer;
       }
 
-      .photo img {
+      .image-section img {
         width: 100%;
         height: 100%;
         object-fit: cover;
       }
 
-      .info {
-        padding: 15px;
+      .title-section {
+        padding: 12px 15px;
+        background-color: #f9f9f9;
+        border-bottom: 1px solid #eee;
       }
 
-      .info h3 {
+      .title-section h3 {
+        font-size: 16px;
+        color: #333;
+        margin: 0;
+      }
+
+      .info-section {
+        padding: 15px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+
+      .info-section.active {
+        max-height: 500px;
+      }
+
+      .info-section h3 {
         font-size: 18px;
         margin-bottom: 8px;
         color: #4caf50;
       }
 
-      .info p {
+      .info-section p {
         font-size: 14px;
         color: #666;
         margin: 5px 0;
@@ -82,17 +106,60 @@
         font-weight: bold;
         color: #333;
       }
+
+      .loading {
+        color: #999;
+        font-style: italic;
+      }
+
+      .error {
+        color: #d32f2f;
+      }
+
+      footer {
+        margin-top: 60px;
+        padding: 20px;
+        background-color: #333;
+        color: white;
+        text-align: center;
+        border-radius: 8px;
+      }
+
+      footer .fortune {
+        font-size: 18px;
+        font-style: italic;
+        color: #4caf50;
+      }
+
+      footer .label {
+        font-size: 12px;
+        color: #999;
+        margin-top: 8px;
+      }
     </style>
   </head>
   <body>
-    <h1>Koleksi Data</h1>
-    <div id="data-container"></div>
+    <main>
+      <h1>Koleksi Data</h1>
+      <div id="data-container"></div>
+    </main>
+
+    <footer>
+      <div class="fortune" id="fortuneText">Memuat pesan keberuntungan...</div>
+      <div class="label">Today's Fortune</div>
+    </footer>
 
     <script>
+      console.log("Script started");
+
       async function fetchKoleksi() {
+        console.log("fetchKoleksi called");
         try {
           const response = await fetch("/api/get-koleksi");
+          console.log("Response received:", response.status);
+
           const result = await response.json();
+          console.log("Result:", result);
 
           if (result.error) {
             document.getElementById("data-container").innerHTML =
@@ -100,33 +167,103 @@
             return;
           }
 
+          // Create cards with images and judul
           const html = result.data
-            .map(
-              (item) => `
-                <div class="gallery-card">
-                  <div class="photo">
-                    <img src="${item.path}" alt="${item.judul}" />
+            .map((item) => {
+              console.log("Creating card for item:", item);
+              return `
+                <div class="card">
+                  <div class="image-section" onclick="toggleDetail(${item.id})">
+                    <img src="${item.path}" alt="Item ${item.id}" />
                   </div>
-                  <div class="info">
+                  <div class="title-section">
                     <h3>${item.judul}</h3>
-                    <p><span class="label">Pencipta:</span> ${item.pencipta}</p>
-                    <p><span class="label">Tahun:</span> ${item.tahun}</p>
-                    <p><span class="label">Harga:</span> Rp ${item.harga}</p>
-                    <p style="font-size: 12px; color: #999; margin-top: 10px;">#${item.id}</p>
                   </div>
+                  <div class="info-section" id="info-${item.id}"></div>
                 </div>
-              `,
-            )
+              `;
+            })
             .join("");
 
           document.getElementById("data-container").innerHTML = html;
+          console.log("Cards rendered");
         } catch (err) {
+          console.error("Fetch error:", err);
           document.getElementById("data-container").innerHTML =
             `<p>Failed to fetch: ${err.message}</p>`;
         }
       }
 
+      function toggleDetail(id) {
+        console.log("toggleDetail called with id:", id);
+        const infoSection = document.getElementById(`info-${id}`);
+        console.log("Info section found:", infoSection);
+
+        if (!infoSection) {
+          console.error("Could not find element with id: info-" + id);
+          return;
+        }
+
+        if (infoSection.classList.contains("active")) {
+          infoSection.classList.remove("active");
+          return;
+        }
+
+        if (infoSection.innerHTML.trim() === "") {
+          infoSection.innerHTML = `<p class="loading">Loading details...</p>`;
+          fetchDetail(id, infoSection);
+        }
+
+        infoSection.classList.add("active");
+      }
+
+      async function fetchDetail(id, infoSection) {
+        console.log("fetchDetail called for id:", id);
+        try {
+          const response = await fetch(`/api/get-detail?id=${id}`);
+          console.log(`Response status: ${response.status}`);
+
+          const result = await response.json();
+          console.log(`Response data:`, result);
+
+          if (result.error) {
+            infoSection.innerHTML = `<p class="error">Error: ${result.error.message || result.error}</p>`;
+            return;
+          }
+
+          const item = result.data;
+          infoSection.innerHTML = `
+            <p><span class="label">Pencipta:</span> ${item.pencipta}</p>
+            <p><span class="label">Tahun:</span> ${item.tahun}</p>
+            <p><span class="label">Harga:</span> Rp ${item.harga}</p>
+          `;
+        } catch (err) {
+          console.error("Fetch error:", err);
+          infoSection.innerHTML = `<p class="error">Failed to load: ${err.message}</p>`;
+        }
+      }
+
+      async function fetchFortune() {
+        console.log("fetchFortune called");
+        try {
+          const response = await fetch("/api/fortune");
+          const result = await response.json();
+          console.log("Fortune:", result);
+
+          if (result.fortune) {
+            document.getElementById("fortuneText").textContent =
+              `"${result.fortune}"`;
+          }
+        } catch (err) {
+          console.error("Fortune fetch error:", err);
+          document.getElementById("fortuneText").textContent =
+            "Fortune service unavailable";
+        }
+      }
+
+      console.log("About to call fetchKoleksi and fetchFortune");
       fetchKoleksi();
+      fetchFortune();
     </script>
   </body>
 </html>

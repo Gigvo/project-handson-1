@@ -15,9 +15,9 @@ export default async function handler(req, res) {
   const startTime = Date.now();
   try {
     // 1. Check Redis cache first
-    const cachedData = await redis.get("koleksi_data");
+    const cachedData = await redis.get("koleksi_list");
     if (cachedData) {
-      console.log("Serving from cache");
+      console.log("Serving list from cache");
       const duration = Date.now() - startTime;
       return res
         .status(200)
@@ -26,13 +26,15 @@ export default async function handler(req, res) {
         .json({ data: JSON.parse(cachedData) });
     }
 
-    // 2. If not in cache, fetch from Supabase
+    // 2. If not in cache, fetch from Supabase (only path and id)
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_ANON_KEY,
     );
 
-    const { data, error } = await supabase.from("koleksi").select("*");
+    const { data, error } = await supabase
+      .from("koleksi")
+      .select("id, path, judul");
 
     console.log("Data:", data);
     console.log("Error:", error);
@@ -41,8 +43,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: error.message });
     }
 
-    // 3. Cache the data for 1 hour (3600 seconds)
-    await redis.setEx("koleksi_data", 3600, JSON.stringify(data));
+    // 3. Cache the list for 1 hour (3600 seconds)
+    await redis.setEx("koleksi_list", 3600, JSON.stringify(data));
 
     const duration = Date.now() - startTime;
     return res
